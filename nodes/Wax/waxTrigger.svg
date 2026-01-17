@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="60" height="60" rx="8" fill="#F89022"/>
+  <path d="M8 36L12 20H16L18 29L22 20H26L30 29L32 20H36L40 36H35L33 26L29 36H23L19 26L17 36H8Z" fill="white"/>
+  <!-- Lightning bolt for trigger -->
+  <path d="M44 14L38 28H44L40 42L52 24H46L48 14H44Z" fill="white" stroke="#F89022" stroke-width="1"/>
+  <circle cx="24" cy="43" r="2.5" fill="white"/>
+</svg>
