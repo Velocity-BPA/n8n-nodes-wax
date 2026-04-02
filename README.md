@@ -8,25 +8,25 @@
 >
 > For licensing information, visit https://velobpa.com/licensing or contact licensing@velobpa.com.
 
-A comprehensive n8n community node for the WAX blockchain ecosystem, providing seamless integration with 8 core resources including AtomicAssets, Collections, Templates, Schemas, AtomicMarket, Accounts, Transfers, and Offers for building powerful NFT and gaming automation workflows.
+This n8n community node provides comprehensive integration with the WAX blockchain ecosystem, offering access to 6 key resources including AtomicAssets, AtomicMarket, account management, and transaction operations. It enables seamless automation of NFT marketplace operations, blockchain account monitoring, and asset management workflows within n8n.
 
 ![n8n Community Node](https://img.shields.io/badge/n8n-Community%20Node-blue)
 ![License](https://img.shields.io/badge/license-BSL--1.1-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)
 ![WAX Blockchain](https://img.shields.io/badge/WAX-Blockchain-orange)
 ![AtomicAssets](https://img.shields.io/badge/AtomicAssets-NFT-purple)
-![Gaming](https://img.shields.io/badge/Gaming-DeFi-green)
+![AtomicMarket](https://img.shields.io/badge/AtomicMarket-Marketplace-green)
 
 ## Features
 
-- **AtomicAssets Integration** - Full NFT asset management with create, transfer, and query operations
-- **Collection Management** - Complete collection lifecycle from creation to modification and analytics
-- **Template Operations** - Design and deploy NFT templates with schema validation and metadata handling
-- **Schema Definition** - Define and manage data structures for NFT collections with type enforcement
-- **AtomicMarket Support** - Marketplace operations including listings, sales, auctions, and price monitoring
-- **Account Operations** - Comprehensive account management with balance checking and resource monitoring
-- **Transfer Handling** - Secure asset transfers with multi-signature support and transaction tracking
-- **Offer Management** - Create, accept, decline, and monitor trading offers with automated workflows
+- **AtomicAssets Integration** - Complete NFT asset management including minting, transferring, and querying assets
+- **AtomicMarket Operations** - Full marketplace functionality for listings, sales, auctions, and market analytics
+- **Account Management** - Comprehensive WAX account operations including balance checks, permission management, and account history
+- **Transfer Operations** - Native WAX token and NFT transfer capabilities with transaction tracking
+- **Burn Operations** - Asset burning functionality for NFT destruction and token deflation mechanisms
+- **Configuration Management** - Dynamic WAX network configuration and endpoint management
+- **Real-time Monitoring** - Live blockchain event monitoring and transaction status tracking
+- **Batch Processing** - Efficient bulk operations for large-scale asset and transaction management
 
 ## Installation
 
@@ -61,9 +61,9 @@ n8n start
 
 | Field | Description | Required |
 |-------|-------------|----------|
-| API Key | Your WAX API key for authenticated requests | Yes |
-| Environment | Select production or testnet environment | Yes |
-| Rate Limit | Requests per second limit (default: 10) | No |
+| API Key | Your WAX API access key for authenticated operations | Yes |
+| Environment | Target WAX network environment (mainnet/testnet) | Yes |
+| Endpoint URL | Custom WAX API endpoint URL (optional override) | No |
 
 ## Resources & Operations
 
@@ -71,135 +71,116 @@ n8n start
 
 | Operation | Description |
 |-----------|-------------|
-| Get Asset | Retrieve detailed information about a specific asset |
-| List Assets | Query multiple assets with filtering options |
-| Transfer Asset | Transfer asset ownership to another account |
-| Create Asset | Mint new assets using existing templates |
-| Update Asset | Modify mutable asset data |
-| Burn Asset | Permanently destroy an asset |
+| Get Assets | Retrieve NFT assets by owner, collection, or template |
+| Get Asset Details | Fetch detailed information for a specific asset |
+| Create Asset | Mint new NFT assets with metadata |
+| Transfer Asset | Transfer assets between WAX accounts |
+| Update Asset | Modify mutable asset attributes |
+| Get Collections | List available NFT collections |
+| Get Templates | Retrieve asset templates and schemas |
+| Get Schema | Fetch collection schema definitions |
 
-### 2. Collections
-
-| Operation | Description |
-|-----------|-------------|
-| Get Collection | Retrieve collection details and statistics |
-| List Collections | Browse collections with pagination and filters |
-| Create Collection | Initialize new NFT collection |
-| Update Collection | Modify collection metadata and settings |
-| Get Collection Stats | Retrieve trading volume and holder statistics |
-
-### 3. Templates
+### 2. AtomicMarket
 
 | Operation | Description |
 |-----------|-------------|
-| Get Template | Fetch template configuration and schema |
-| List Templates | Query templates by collection or attributes |
-| Create Template | Design new NFT templates with metadata |
-| Update Template | Modify template immutable data |
-| Get Template Stats | Retrieve minting and usage statistics |
-
-### 4. Schemas
-
-| Operation | Description |
-|-----------|-------------|
-| Get Schema | Retrieve schema definition and structure |
-| List Schemas | Browse available schemas by collection |
-| Create Schema | Define new data structures for NFTs |
-| Update Schema | Modify schema attributes and validation rules |
-
-### 5. AtomicMarket
-
-| Operation | Description |
-|-----------|-------------|
-| Get Sale | Retrieve marketplace sale information |
-| List Sales | Browse active and completed sales |
+| Get Sales | Retrieve active and completed marketplace sales |
 | Create Sale | List assets for sale on the marketplace |
-| Cancel Sale | Remove assets from marketplace |
-| Get Auction | Fetch auction details and bid history |
-| List Auctions | Query active auctions with filtering |
-| Place Bid | Submit bids on auction items |
+| Cancel Sale | Remove assets from marketplace listings |
+| Purchase Asset | Buy assets from marketplace listings |
+| Get Auctions | Fetch active and completed auction listings |
+| Create Auction | List assets for auction with bidding |
+| Place Bid | Submit bids on auction listings |
+| Get Market Stats | Retrieve marketplace analytics and statistics |
 
-### 6. Accounts
-
-| Operation | Description |
-|-----------|-------------|
-| Get Account | Retrieve account information and balances |
-| Get Account Assets | List all assets owned by an account |
-| Get Account Collections | Show collections associated with account |
-| Get Account History | Fetch transaction history and activities |
-| Check Resources | Monitor CPU, NET, and RAM usage |
-
-### 7. Transfers
+### 3. Accounts
 
 | Operation | Description |
 |-----------|-------------|
-| Execute Transfer | Send assets between WAX accounts |
-| Get Transfer | Retrieve transfer transaction details |
-| List Transfers | Query transfer history with filters |
-| Batch Transfer | Execute multiple transfers in sequence |
-| Verify Transfer | Confirm transfer completion and status |
+| Get Account Info | Retrieve detailed WAX account information |
+| Get Account Balance | Check WAX and token balances |
+| Get Account History | Fetch transaction history for accounts |
+| Get Permissions | Retrieve account permission structure |
+| Update Permissions | Modify account permission settings |
+| Get Resources | Check CPU, NET, and RAM allocations |
+| Stake Resources | Stake WAX for CPU and NET resources |
 
-### 8. Offers
+### 4. Transfers
 
 | Operation | Description |
 |-----------|-------------|
-| Get Offer | Retrieve offer details and status |
-| List Offers | Browse sent and received offers |
-| Create Offer | Propose asset trades with other users |
-| Accept Offer | Accept incoming trade offers |
-| Decline Offer | Reject trade proposals |
-| Cancel Offer | Withdraw sent offers |
+| Send WAX | Transfer native WAX tokens between accounts |
+| Send Tokens | Transfer custom tokens on WAX blockchain |
+| Get Transfer History | Retrieve transfer transaction records |
+| Bulk Transfer | Execute multiple transfers in batch |
+| Validate Transfer | Verify transfer parameters before execution |
+| Get Transaction Status | Check status of pending transfers |
+
+### 5. Burns
+
+| Operation | Description |
+|-----------|-------------|
+| Burn Asset | Permanently destroy NFT assets |
+| Burn Tokens | Burn fungible tokens to reduce supply |
+| Get Burn History | Retrieve records of burned assets |
+| Bulk Burn | Execute multiple burn operations |
+| Validate Burn | Verify burn parameters before execution |
+
+### 6. Config
+
+| Operation | Description |
+|-----------|-------------|
+| Get Network Info | Retrieve WAX network configuration |
+| Get API Endpoints | List available API endpoints |
+| Update Settings | Modify node configuration settings |
+| Test Connection | Verify connectivity to WAX network |
+| Get Chain Info | Fetch current blockchain information |
 
 ## Usage Examples
 
 ```javascript
-// Get collection statistics for Alien Worlds
+// Get all NFTs owned by an account
 {
-  "resource": "Collections",
-  "operation": "Get Collection Stats",
-  "collection_name": "alien.worlds",
-  "symbol": "TLM"
+  "resource": "AtomicAssets",
+  "operation": "Get Assets",
+  "owner": "waxaccount123",
+  "limit": 100,
+  "page": 1
 }
 ```
 
 ```javascript
-// List high-value sales from AtomicMarket
+// Create a marketplace sale listing
 {
-  "resource": "AtomicMarket",
-  "operation": "List Sales",
-  "min_price": "100.00000000 WAX",
-  "state": "1",
-  "limit": 50
+  "resource": "AtomicMarket", 
+  "operation": "Create Sale",
+  "seller": "mynftaccount",
+  "asset_ids": ["1099511627776", "1099511627777"],
+  "listing_price": "100.00000000 WAX",
+  "settlement_symbol": "WAX"
 }
 ```
 
 ```javascript
-// Create new NFT template for gaming assets
+// Transfer WAX tokens between accounts
 {
-  "resource": "Templates",
-  "operation": "Create Template",
-  "authorized_account": "gamedev.wax",
-  "collection_name": "mygame.nfts",
-  "schema_name": "weapons",
-  "transferable": true,
-  "burnable": false,
-  "immutable_data": {
-    "name": "Legendary Sword",
-    "rarity": "Legendary",
-    "attack": 150
-  }
+  "resource": "Transfers",
+  "operation": "Send WAX",
+  "from": "senderaccount",
+  "to": "receiveracct",
+  "quantity": "50.00000000 WAX",
+  "memo": "Payment for services"
 }
 ```
 
 ```javascript
-// Monitor account for new asset transfers
+// Check account balance and resources
 {
   "resource": "Accounts",
-  "operation": "Get Account History",
-  "account": "player.wax",
-  "limit": 100,
-  "page": 1,
-  "order": "desc"
+  "operation": "Get Account Info",
+  "account_name": "waxaccount123",
+  "include_resources": true,
+  "include_permissions": false
 }
 ```
 
@@ -207,12 +188,12 @@ n8n start
 
 | Error | Description | Solution |
 |-------|-------------|----------|
-| Invalid API Key | Authentication failed with provided credentials | Verify API key in credential configuration |
-| Rate Limit Exceeded | Too many requests sent within time window | Reduce request frequency or upgrade API plan |
-| Asset Not Found | Requested asset ID does not exist | Verify asset ID and check if asset was burned |
-| Insufficient Resources | Account lacks CPU/NET for transaction | Stake more WAX or wait for resource regeneration |
-| Collection Not Found | Specified collection name is invalid | Check collection name spelling and existence |
-| Template Mismatch | Asset template doesn't match collection schema | Verify template ID belongs to correct collection |
+| Invalid API Key | Authentication failed with provided credentials | Verify API key is correct and has necessary permissions |
+| Insufficient Resources | Account lacks CPU/NET for transaction | Stake more WAX for resources or wait for regeneration |
+| Asset Not Found | Requested NFT asset does not exist | Verify asset ID is correct and asset hasn't been burned |
+| Account Not Found | WAX account name does not exist | Check account name spelling and existence on blockchain |
+| Transaction Failed | Blockchain transaction was rejected | Review transaction parameters and account permissions |
+| Rate Limit Exceeded | Too many API requests in short timeframe | Implement delays between requests or upgrade API plan |
 
 ## Development
 
@@ -257,5 +238,5 @@ Contributions are welcome! Please ensure:
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/Velocity-BPA/n8n-nodes-wax/issues)
-- **WAX Developer Documentation**: [WAX Developer Portal](https://developer.wax.io/)
-- **AtomicAssets API Docs**: [AtomicAssets Documentation](https://atomicassets.io/)
+- **WAX Developer Portal**: [developer.wax.io](https://developer.wax.io)
+- **AtomicAssets Documentation**: [github.com/pinknetworkx/atomicassets-api](https://github.com/pinknetworkx/atomicassets-api)
