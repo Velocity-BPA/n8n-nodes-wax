@@ -33,20 +33,20 @@ describe('WAX Node', () => {
       expect(node.description.outputs).toContain('main');
     });
 
-    it('should define 8 resources', () => {
+    it('should define 6 resources', () => {
       const resourceProp = node.description.properties.find(
         (p: any) => p.name === 'resource'
       );
       expect(resourceProp).toBeDefined();
       expect(resourceProp!.type).toBe('options');
-      expect(resourceProp!.options).toHaveLength(8);
+      expect(resourceProp!.options).toHaveLength(6);
     });
 
     it('should have operation dropdowns for each resource', () => {
       const operations = node.description.properties.filter(
         (p: any) => p.name === 'operation'
       );
-      expect(operations.length).toBe(8);
+      expect(operations.length).toBe(6);
     });
 
     it('should require credentials', () => {
@@ -73,1091 +73,375 @@ describe('AtomicAssets Resource', () => {
   beforeEach(() => {
     mockExecuteFunctions = {
       getNodeParameter: jest.fn(),
-      getCredentials: jest.fn().mockResolvedValue({
-        apiKey: 'test-api-key',
-        baseUrl: 'https://wax.api.atomicassets.io',
-      }),
+      getCredentials: jest.fn().mockResolvedValue({ apiKey: 'test-key', baseUrl: 'https://wax.api.atomicassets.io' }),
       getInputData: jest.fn().mockReturnValue([{ json: {} }]),
       getNode: jest.fn().mockReturnValue({ name: 'Test Node' }),
       continueOnFail: jest.fn().mockReturnValue(false),
-      helpers: {
-        httpRequest: jest.fn(),
-        requestWithAuthentication: jest.fn(),
-      },
+      helpers: { httpRequest: jest.fn(), requestWithAuthentication: jest.fn() },
     };
   });
 
-  test('should get assets successfully', async () => {
-    mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-      const params: any = {
-        operation: 'getAssets',
-        owner: 'testowner',
-        collectionName: 'testcollection',
-        limit: 10,
-        page: 1,
-      };
-      return params[param];
-    });
+  it('should get assets successfully', async () => {
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('getAssets');
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('testowner');
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('testcollection');
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('');
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('');
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce(100);
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce(1);
 
-    const mockResponse = {
-      success: true,
-      data: [
-        { asset_id: '1', owner: 'testowner', collection: { name: 'testcollection' } }
-      ]
-    };
-
+    const mockResponse = { success: true, data: [] };
     mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
     const result = await executeAtomicAssetsOperations.call(mockExecuteFunctions, [{ json: {} }]);
 
-    expect(result).toHaveLength(1);
-    expect(result[0].json).toEqual(mockResponse);
-    expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: 'GET',
-        url: expect.stringContaining('/atomicassets/v1/assets'),
-      })
-    );
+    expect(result).toEqual([{ json: mockResponse, pairedItem: { item: 0 } }]);
+    expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+      method: 'GET',
+      url: 'https://wax.api.atomicassets.io/atomicassets/v1/assets?owner=testowner&collection_name=testcollection&limit=100&page=1',
+      json: true,
+    });
   });
 
-  test('should get specific asset successfully', async () => {
-    mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-      const params: any = {
-        operation: 'getAsset',
-        assetId: '12345',
-      };
-      return params[param];
-    });
+  it('should get specific asset successfully', async () => {
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('getAsset');
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('1099511627776');
 
-    const mockResponse = {
-      success: true,
-      data: { asset_id: '12345', owner: 'testowner' }
-    };
-
+    const mockResponse = { success: true, data: { asset_id: '1099511627776' } };
     mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
     const result = await executeAtomicAssetsOperations.call(mockExecuteFunctions, [{ json: {} }]);
 
-    expect(result).toHaveLength(1);
-    expect(result[0].json).toEqual(mockResponse);
-    expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: 'GET',
-        url: expect.stringContaining('/atomicassets/v1/assets/12345'),
-      })
-    );
-  });
-
-  test('should get asset stats successfully', async () => {
-    mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-      const params: any = {
-        operation: 'getAssetStats',
-        assetId: '12345',
-      };
-      return params[param];
+    expect(result).toEqual([{ json: mockResponse, pairedItem: { item: 0 } }]);
+    expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+      method: 'GET',
+      url: 'https://wax.api.atomicassets.io/atomicassets/v1/assets/1099511627776',
+      json: true,
     });
-
-    const mockResponse = {
-      success: true,
-      data: { asset_id: '12345', transfers: 5, views: 100 }
-    };
-
-    mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-    const result = await executeAtomicAssetsOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-    expect(result).toHaveLength(1);
-    expect(result[0].json).toEqual(mockResponse);
-    expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: expect.stringContaining('/atomicassets/v1/assets/12345/stats'),
-      })
-    );
   });
 
-  test('should get asset logs successfully', async () => {
-    mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-      const params: any = {
-        operation: 'getAssetLogs',
-        assetId: '12345',
-        page: 1,
-        limit: 10,
-      };
-      return params[param];
-    });
-
-    const mockResponse = {
-      success: true,
-      data: [
-        { log_id: 1, asset_id: '12345', action: 'transfer' }
-      ]
-    };
-
-    mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-    const result = await executeAtomicAssetsOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-    expect(result).toHaveLength(1);
-    expect(result[0].json).toEqual(mockResponse);
-    expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: expect.stringContaining('/atomicassets/v1/assets/12345/logs'),
-      })
-    );
-  });
-
-  test('should handle API errors', async () => {
-    mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-      const params: any = {
-        operation: 'getAsset',
-        assetId: 'invalid',
-      };
-      return params[param];
-    });
-
-    const mockError = new Error('Asset not found');
-    mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(mockError);
-
-    await expect(executeAtomicAssetsOperations.call(mockExecuteFunctions, [{ json: {} }]))
-      .rejects.toThrow('Asset not found');
-  });
-
-  test('should handle errors gracefully when continueOnFail is true', async () => {
+  it('should handle API errors gracefully', async () => {
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('getAsset');
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('invalid-id');
     mockExecuteFunctions.continueOnFail.mockReturnValue(true);
-    mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-      const params: any = {
-        operation: 'getAsset',
-        assetId: 'invalid',
-      };
-      return params[param];
-    });
 
     const mockError = new Error('Asset not found');
     mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(mockError);
 
     const result = await executeAtomicAssetsOperations.call(mockExecuteFunctions, [{ json: {} }]);
 
-    expect(result).toHaveLength(1);
-    expect(result[0].json).toEqual({ error: 'Asset not found' });
-  });
-});
-
-describe('Collections Resource', () => {
-  let mockExecuteFunctions: any;
-
-  beforeEach(() => {
-    mockExecuteFunctions = {
-      getNodeParameter: jest.fn(),
-      getCredentials: jest.fn().mockResolvedValue({
-        apiKey: 'test-api-key',
-        baseUrl: 'https://wax.api.atomicassets.io',
-      }),
-      getInputData: jest.fn().mockReturnValue([{ json: {} }]),
-      getNode: jest.fn().mockReturnValue({ name: 'Test Node' }),
-      continueOnFail: jest.fn().mockReturnValue(false),
-      helpers: {
-        httpRequest: jest.fn(),
-        requestWithAuthentication: jest.fn(),
-      },
-    };
+    expect(result).toEqual([{ json: { error: 'Asset not found' }, pairedItem: { item: 0 } }]);
   });
 
-  describe('getCollections', () => {
-    it('should successfully get collections with filters', async () => {
-      const mockResponse = {
-        success: true,
-        data: [
-          {
-            collection_name: 'test.collection',
-            name: 'Test Collection',
-            author: 'testauthor',
-            allow_notify: true,
-            authorized_accounts: ['testaccount'],
-            notify_accounts: [],
-            market_fee: 0.05,
-            created_at_block: '123456789',
-            created_at_time: '1634567890000'
-          }
-        ]
-      };
+  it('should get collections successfully', async () => {
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('getCollections');
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('testauthor');
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('');
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce(50);
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce(1);
 
-      mockExecuteFunctions.getNodeParameter.mockImplementation((name: string) => {
-        switch (name) {
-          case 'operation': return 'getCollections';
-          case 'author': return 'testauthor';
-          case 'limit': return 100;
-          case 'page': return 1;
-          default: return '';
-        }
-      });
+    const mockResponse = { success: true, data: [] };
+    mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
+    const result = await executeAtomicAssetsOperations.call(mockExecuteFunctions, [{ json: {} }]);
 
-      const result = await executeCollectionsOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/collections?author=testauthor&limit=100&page=1',
-        headers: {
-          'Authorization': 'Bearer test-api-key',
-        },
-        json: true,
-      });
-    });
+    expect(result).toEqual([{ json: mockResponse, pairedItem: { item: 0 } }]);
   });
 
-  describe('getCollection', () => {
-    it('should successfully get specific collection', async () => {
-      const mockResponse = {
-        success: true,
-        data: {
-          collection_name: 'test.collection',
-          name: 'Test Collection',
-          author: 'testauthor',
-          allow_notify: true,
-          authorized_accounts: ['testaccount'],
-          notify_accounts: [],
-          market_fee: 0.05,
-          data: {}
-        }
-      };
-
-      mockExecuteFunctions.getNodeParameter.mockImplementation((name: string) => {
-        switch (name) {
-          case 'operation': return 'getCollection';
-          case 'collection_name': return 'test.collection';
-          default: return '';
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-      const result = await executeCollectionsOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/collections/test.collection',
-        headers: {
-          'Authorization': 'Bearer test-api-key',
-        },
-        json: true,
-      });
-    });
-  });
-
-  describe('getCollectionStats', () => {
-    it('should successfully get collection statistics', async () => {
-      const mockResponse = {
-        success: true,
-        data: {
-          assets: '1000',
-          burned: '50',
-          templates: '25',
-          schemas: '5'
-        }
-      };
-
-      mockExecuteFunctions.getNodeParameter.mockImplementation((name: string) => {
-        switch (name) {
-          case 'operation': return 'getCollectionStats';
-          case 'collection_name': return 'test.collection';
-          default: return '';
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-      const result = await executeCollectionsOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/collections/test.collection/stats',
-        headers: {
-          'Authorization': 'Bearer test-api-key',
-        },
-        json: true,
-      });
-    });
-  });
-
-  describe('getCollectionLogs', () => {
-    it('should successfully get collection logs', async () => {
-      const mockResponse = {
-        success: true,
-        data: [
-          {
-            log_id: '123456',
-            name: 'logsetdata',
-            data: {
-              collection_name: 'test.collection',
-              new_data: {}
-            },
-            txid: 'abc123def456',
-            created_at_block: '123456789',
-            created_at_time: '1634567890000'
-          }
-        ]
-      };
-
-      mockExecuteFunctions.getNodeParameter.mockImplementation((name: string) => {
-        switch (name) {
-          case 'operation': return 'getCollectionLogs';
-          case 'collection_name': return 'test.collection';
-          case 'limit': return 100;
-          case 'page': return 1;
-          default: return '';
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-      const result = await executeCollectionsOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/collections/test.collection/logs?limit=100&page=1',
-        headers: {
-          'Authorization': 'Bearer test-api-key',
-        },
-        json: true,
-      });
-    });
-  });
-
-  describe('error handling', () => {
-    it('should handle API errors', async () => {
-      mockExecuteFunctions.getNodeParameter.mockImplementation((name: string) => {
-        switch (name) {
-          case 'operation': return 'getCollection';
-          case 'collection_name': return 'nonexistent';
-          default: return '';
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('Collection not found'));
-
-      await expect(executeCollectionsOperations.call(mockExecuteFunctions, [{ json: {} }]))
-        .rejects.toThrow('Collection not found');
-    });
-
-    it('should continue on fail when enabled', async () => {
-      mockExecuteFunctions.continueOnFail.mockReturnValue(true);
-      mockExecuteFunctions.getNodeParameter.mockImplementation((name: string) => {
-        switch (name) {
-          case 'operation': return 'getCollection';
-          case 'collection_name': return 'nonexistent';
-          default: return '';
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('Collection not found'));
-
-      const result = await executeCollectionsOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual({ error: 'Collection not found' });
-    });
-  });
-});
-
-describe('Templates Resource', () => {
-  let mockExecuteFunctions: any;
-
-  beforeEach(() => {
-    mockExecuteFunctions = {
-      getNodeParameter: jest.fn(),
-      getCredentials: jest.fn().mockResolvedValue({
-        apiKey: 'test-api-key',
-        baseUrl: 'https://wax.api.atomicassets.io',
-      }),
-      getInputData: jest.fn().mockReturnValue([{ json: {} }]),
-      getNode: jest.fn().mockReturnValue({ name: 'Test Node' }),
-      continueOnFail: jest.fn().mockReturnValue(false),
-      helpers: {
-        httpRequest: jest.fn(),
-        requestWithAuthentication: jest.fn(),
-      },
-    };
-  });
-
-  describe('getTemplates', () => {
-    it('should get templates successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: [
-          {
-            template_id: '1',
-            collection_name: 'testcollection',
-            schema_name: 'testschema',
-            max_supply: '1000',
-            issued_supply: '500'
-          }
-        ]
-      };
-
-      mockExecuteFunctions.getNodeParameter.mockImplementation((paramName: string) => {
-        switch (paramName) {
-          case 'operation': return 'getTemplates';
-          case 'collection_name': return 'testcollection';
-          case 'limit': return 100;
-          default: return undefined;
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-      const result = await executeTemplatesOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/templates?collection_name=testcollection&limit=100',
-        headers: {
-          'Authorization': 'Bearer test-api-key',
-          'Content-Type': 'application/json',
-        },
-        json: true,
-      });
-    });
-
-    it('should handle getTemplates error', async () => {
-      mockExecuteFunctions.getNodeParameter.mockImplementation((paramName: string) => {
-        if (paramName === 'operation') return 'getTemplates';
-        return undefined;
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('API Error'));
-
-      await expect(
-        executeTemplatesOperations.call(mockExecuteFunctions, [{ json: {} }])
-      ).rejects.toThrow();
-    });
-  });
-
-  describe('getTemplate', () => {
-    it('should get specific template successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: {
-          template_id: '123',
-          collection_name: 'testcollection',
-          schema_name: 'testschema',
-          max_supply: '1000',
-          issued_supply: '500'
-        }
-      };
-
-      mockExecuteFunctions.getNodeParameter.mockImplementation((paramName: string) => {
-        switch (paramName) {
-          case 'operation': return 'getTemplate';
-          case 'collection_name': return 'testcollection';
-          case 'template_id': return '123';
-          default: return undefined;
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-      const result = await executeTemplatesOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/templates/testcollection/123',
-        headers: {
-          'Authorization': 'Bearer test-api-key',
-          'Content-Type': 'application/json',
-        },
-        json: true,
-      });
-    });
-  });
-
-  describe('getTemplateStats', () => {
-    it('should get template statistics successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: {
-          assets: '500',
-          burned: '50',
-          template_mint: '550'
-        }
-      };
-
-      mockExecuteFunctions.getNodeParameter.mockImplementation((paramName: string) => {
-        switch (paramName) {
-          case 'operation': return 'getTemplateStats';
-          case 'collection_name': return 'testcollection';
-          case 'template_id': return '123';
-          default: return undefined;
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-      const result = await executeTemplatesOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/templates/testcollection/123/stats',
-        headers: {
-          'Authorization': 'Bearer test-api-key',
-          'Content-Type': 'application/json',
-        },
-        json: true,
-      });
-    });
-  });
-
-  describe('getTemplateLogs', () => {
-    it('should get template logs successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: [
-          {
-            log_id: '1',
-            name: 'mint',
-            txid: 'abc123',
-            created_at_time: '1234567890'
-          }
-        ]
-      };
-
-      mockExecuteFunctions.getNodeParameter.mockImplementation((paramName: string) => {
-        switch (paramName) {
-          case 'operation': return 'getTemplateLogs';
-          case 'collection_name': return 'testcollection';
-          case 'template_id': return '123';
-          case 'page': return 1;
-          case 'limit': return 10;
-          default: return undefined;
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-      const result = await executeTemplatesOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/templates/testcollection/123/logs?page=1&limit=10',
-        headers: {
-          'Authorization': 'Bearer test-api-key',
-          'Content-Type': 'application/json',
-        },
-        json: true,
-      });
-    });
-  });
-});
-
-describe('Schemas Resource', () => {
-  let mockExecuteFunctions: any;
-
-  beforeEach(() => {
-    mockExecuteFunctions = {
-      getNodeParameter: jest.fn(),
-      getCredentials: jest.fn().mockResolvedValue({
-        apiKey: 'test-api-key',
-        baseUrl: 'https://wax.api.atomicassets.io',
-      }),
-      getInputData: jest.fn().mockReturnValue([{ json: {} }]),
-      getNode: jest.fn().mockReturnValue({ name: 'Test Node' }),
-      continueOnFail: jest.fn().mockReturnValue(false),
-      helpers: {
-        httpRequest: jest.fn(),
-        requestWithAuthentication: jest.fn(),
-      },
-    };
-  });
-
-  describe('getSchemas', () => {
-    it('should get schemas successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: [
-          {
-            collection: { collection_name: 'testcoll' },
-            schema_name: 'testschema',
-            format: [{ name: 'name', type: 'string' }]
-          }
-        ]
-      };
-
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getSchemas';
-          case 'collectionName': return 'testcoll';
-          case 'limit': return 100;
-          case 'page': return 1;
-          default: return undefined;
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-      const result = await executeSchemasOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: expect.stringContaining('/atomicassets/v1/schemas'),
-        headers: { 'Authorization': 'Bearer test-api-key' },
-        json: true,
-      });
-    });
-
-    it('should handle errors', async () => {
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        if (param === 'operation') return 'getSchemas';
-        return undefined;
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('API Error'));
-
-      await expect(executeSchemasOperations.call(mockExecuteFunctions, [{ json: {} }])).rejects.toThrow();
-    });
-  });
-
-  describe('getSchema', () => {
-    it('should get specific schema successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: {
-          collection: { collection_name: 'testcoll' },
-          schema_name: 'testschema',
-          format: [{ name: 'name', type: 'string' }]
-        }
-      };
-
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getSchema';
-          case 'collectionName': return 'testcoll';
-          case 'schemaName': return 'testschema';
-          default: return undefined;
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-      const result = await executeSchemasOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/schemas/testcoll/testschema',
-        headers: { 'Authorization': 'Bearer test-api-key' },
-        json: true,
-      });
-    });
-  });
-
-  describe('getSchemaStats', () => {
-    it('should get schema stats successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: {
-          assets: '1234',
-          burned: '0',
-          templates: '5'
-        }
-      };
-
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getSchemaStats';
-          case 'collectionName': return 'testcoll';
-          case 'schemaName': return 'testschema';
-          default: return undefined;
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-      const result = await executeSchemasOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/schemas/testcoll/testschema/stats',
-        headers: { 'Authorization': 'Bearer test-api-key' },
-        json: true,
-      });
-    });
-  });
-
-  describe('getSchemaLogs', () => {
-    it('should get schema logs successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: [
-          {
-            log_id: '123456789',
-            name: 'createschema',
-            data: { schema_name: 'testschema' },
-            txid: 'abc123def456'
-          }
-        ]
-      };
-
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getSchemaLogs';
-          case 'collectionName': return 'testcoll';
-          case 'schemaName': return 'testschema';
-          case 'page': return 1;
-          case 'limit': return 100;
-          default: return undefined;
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-      const result = await executeSchemasOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: expect.stringContaining('/atomicassets/v1/schemas/testcoll/testschema/logs'),
-        headers: { 'Authorization': 'Bearer test-api-key' },
-        json: true,
-      });
+  it('should get specific template successfully', async () => {
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('getTemplate');
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('testcollection');
+    mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('123456');
+
+    const mockResponse = { success: true, data: { template_id: '123456' } };
+    mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
+
+    const result = await executeAtomicAssetsOperations.call(mockExecuteFunctions, [{ json: {} }]);
+
+    expect(result).toEqual([{ json: mockResponse, pairedItem: { item: 0 } }]);
+    expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+      method: 'GET',
+      url: 'https://wax.api.atomicassets.io/atomicassets/v1/templates/testcollection/123456',
+      json: true,
     });
   });
 });
 
 describe('AtomicMarket Resource', () => {
-  let mockExecuteFunctions: any;
+	let mockExecuteFunctions: any;
 
-  beforeEach(() => {
-    mockExecuteFunctions = {
-      getNodeParameter: jest.fn(),
-      getCredentials: jest.fn().mockResolvedValue({
-        apiKey: 'test-api-key',
-        baseUrl: 'https://wax.api.atomicassets.io',
-      }),
-      getInputData: jest.fn().mockReturnValue([{ json: {} }]),
-      getNode: jest.fn().mockReturnValue({ name: 'Test Node' }),
-      continueOnFail: jest.fn().mockReturnValue(false),
-      helpers: {
-        httpRequest: jest.fn(),
-        requestWithAuthentication: jest.fn(),
-      },
-    };
-  });
+	beforeEach(() => {
+		mockExecuteFunctions = {
+			getNodeParameter: jest.fn(),
+			getInputData: jest.fn().mockReturnValue([{ json: {} }]),
+			getNode: jest.fn().mockReturnValue({ name: 'Test Node' }),
+			continueOnFail: jest.fn().mockReturnValue(false),
+			helpers: {
+				httpRequest: jest.fn(),
+			},
+		};
+	});
 
-  describe('getSales', () => {
-    it('should get sales successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: [
-          {
-            sale_id: '123',
-            seller: 'testaccount',
-            price: { amount: '1000', token_symbol: 'WAX' },
-          },
-        ],
-      };
+	describe('getSales operation', () => {
+		it('should get sales list successfully', async () => {
+			mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
+				switch (param) {
+					case 'operation': return 'getSales';
+					case 'state': return '1';
+					case 'seller': return 'testseller';
+					case 'buyer': return '';
+					case 'collectionName': return 'testcoll';
+					case 'limit': return 100;
+					case 'page': return 1;
+					default: return '';
+				}
+			});
 
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getSales';
-          case 'state': return '1';
-          case 'limit': return 100;
-          case 'page': return 1;
-          default: return '';
-        }
-      });
+			const mockResponse = {
+				success: true,
+				data: [{ sale_id: '123', seller: 'testseller' }],
+			};
+			mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
+			const result = await executeAtomicMarketOperations.call(
+				mockExecuteFunctions,
+				[{ json: {} }],
+			);
 
-      const result = await executeAtomicMarketOperations.call(mockExecuteFunctions, [{ json: {} }]);
+			expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+				method: 'GET',
+				url: expect.stringContaining('/atomicmarket/v1/sales'),
+				json: true,
+			});
+			expect(result[0].json).toEqual(mockResponse);
+		});
 
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: 'GET',
-          url: expect.stringContaining('/atomicmarket/v1/sales'),
-        }),
-      );
-    });
+		it('should handle getSales error', async () => {
+			mockExecuteFunctions.getNodeParameter.mockReturnValue('getSales');
+			mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('API Error'));
+			mockExecuteFunctions.continueOnFail.mockReturnValue(true);
 
-    it('should handle errors', async () => {
-      mockExecuteFunctions.getNodeParameter.mockReturnValue('getSales');
-      mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('API Error'));
+			const result = await executeAtomicMarketOperations.call(
+				mockExecuteFunctions,
+				[{ json: {} }],
+			);
 
-      await expect(
-        executeAtomicMarketOperations.call(mockExecuteFunctions, [{ json: {} }]),
-      ).rejects.toThrow();
-    });
-  });
+			expect(result[0].json.error).toBe('API Error');
+		});
+	});
 
-  describe('getSale', () => {
-    it('should get specific sale successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: {
-          sale_id: '123',
-          seller: 'testaccount',
-          price: { amount: '1000', token_symbol: 'WAX' },
-        },
-      };
+	describe('getSale operation', () => {
+		it('should get specific sale successfully', async () => {
+			mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
+				switch (param) {
+					case 'operation': return 'getSale';
+					case 'saleId': return '123';
+					default: return '';
+				}
+			});
 
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getSale';
-          case 'saleId': return '123';
-          default: return '';
-        }
-      });
+			const mockResponse = {
+				success: true,
+				data: { sale_id: '123', seller: 'testseller' },
+			};
+			mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
+			const result = await executeAtomicMarketOperations.call(
+				mockExecuteFunctions,
+				[{ json: {} }],
+			);
 
-      const result = await executeAtomicMarketOperations.call(mockExecuteFunctions, [{ json: {} }]);
+			expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+				method: 'GET',
+				url: 'https://wax.api.atomicassets.io/atomicmarket/v1/sales/123',
+				json: true,
+			});
+			expect(result[0].json).toEqual(mockResponse);
+		});
+	});
 
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: 'GET',
-          url: expect.stringContaining('/atomicmarket/v1/sales/123'),
-        }),
-      );
-    });
-  });
+	describe('getAuctions operation', () => {
+		it('should get auctions list successfully', async () => {
+			mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
+				switch (param) {
+					case 'operation': return 'getAuctions';
+					case 'state': return '1';
+					case 'seller': return 'testseller';
+					case 'bidder': return 'testbidder';
+					case 'collectionName': return 'testcoll';
+					case 'limit': return 50;
+					case 'page': return 1;
+					default: return '';
+				}
+			});
 
-  describe('getAuctions', () => {
-    it('should get auctions successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: [
-          {
-            auction_id: '456',
-            seller: 'testaccount',
-            end_time: '2024-01-01T00:00:00Z',
-          },
-        ],
-      };
+			const mockResponse = {
+				success: true,
+				data: [{ auction_id: '456', seller: 'testseller' }],
+			};
+			mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getAuctions';
-          case 'state': return '1';
-          case 'limit': return 100;
-          default: return '';
-        }
-      });
+			const result = await executeAtomicMarketOperations.call(
+				mockExecuteFunctions,
+				[{ json: {} }],
+			);
 
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
+			expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+				method: 'GET',
+				url: expect.stringContaining('/atomicmarket/v1/auctions'),
+				json: true,
+			});
+			expect(result[0].json).toEqual(mockResponse);
+		});
+	});
 
-      const result = await executeAtomicMarketOperations.call(mockExecuteFunctions, [{ json: {} }]);
+	describe('getPrices operation', () => {
+		it('should get prices successfully', async () => {
+			mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
+				switch (param) {
+					case 'operation': return 'getPrices';
+					case 'collectionName': return 'testcoll';
+					case 'templateId': return '12345';
+					case 'symbol': return 'WAX';
+					default: return '';
+				}
+			});
 
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-    });
-  });
+			const mockResponse = {
+				success: true,
+				data: [{ template_id: '12345', median: '100.0000 WAX' }],
+			};
+			mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
-  describe('getBuyOffers', () => {
-    it('should get buy offers successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: [
-          {
-            buyoffer_id: '789',
-            buyer: 'testbuyer',
-            price: { amount: '500', token_symbol: 'WAX' },
-          },
-        ],
-      };
+			const result = await executeAtomicMarketOperations.call(
+				mockExecuteFunctions,
+				[{ json: {} }],
+			);
 
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getBuyOffers';
-          case 'buyer': return 'testbuyer';
-          case 'limit': return 50;
-          default: return '';
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-      const result = await executeAtomicMarketOperations.call(mockExecuteFunctions, [{ json: {} }]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-    });
-  });
+			expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+				method: 'GET',
+				url: expect.stringContaining('/atomicmarket/v1/prices'),
+				json: true,
+			});
+			expect(result[0].json).toEqual(mockResponse);
+		});
+	});
 });
 
 describe('Accounts Resource', () => {
-  let mockExecuteFunctions: any;
+	let mockExecuteFunctions: any;
 
-  beforeEach(() => {
-    mockExecuteFunctions = {
-      getNodeParameter: jest.fn(),
-      getCredentials: jest.fn().mockResolvedValue({
-        apiKey: 'test-api-key',
-        baseUrl: 'https://wax.api.atomicassets.io',
-      }),
-      getInputData: jest.fn().mockReturnValue([{ json: {} }]),
-      getNode: jest.fn().mockReturnValue({ name: 'Test Node' }),
-      continueOnFail: jest.fn().mockReturnValue(false),
-      helpers: {
-        httpRequest: jest.fn(),
-        requestWithAuthentication: jest.fn(),
-      },
-    };
-  });
+	beforeEach(() => {
+		mockExecuteFunctions = {
+			getNodeParameter: jest.fn(),
+			getCredentials: jest.fn().mockResolvedValue({
+				baseUrl: 'https://wax.api.atomicassets.io',
+			}),
+			getInputData: jest.fn().mockReturnValue([{ json: {} }]),
+			getNode: jest.fn().mockReturnValue({ name: 'Test Node' }),
+			continueOnFail: jest.fn().mockReturnValue(false),
+			helpers: {
+				httpRequest: jest.fn(),
+				requestWithAuthentication: jest.fn(),
+			},
+		};
+	});
 
-  describe('getAccounts', () => {
-    it('should get accounts list successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: [
-          { account: 'testaccount1' },
-          { account: 'testaccount2' }
-        ]
-      };
+	describe('getAccounts operation', () => {
+		it('should get accounts successfully', async () => {
+			mockExecuteFunctions.getNodeParameter
+				.mockReturnValueOnce('getAccounts')
+				.mockReturnValueOnce('test')
+				.mockReturnValueOnce('collection1')
+				.mockReturnValueOnce(50)
+				.mockReturnValueOnce(1);
 
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getAccounts';
-          case 'match': return 'test';
-          case 'limit': return 100;
-          case 'page': return 1;
-          case 'collection_name': return '';
-          default: return undefined;
-        }
-      });
+			const mockResponse = { data: [{ account: 'testaccount' }] };
+			mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
+			const result = await executeAccountsOperations.call(mockExecuteFunctions, [{ json: {} }]);
 
-      const items = [{ json: {} }];
-      const result = await executeAccountsOperations.call(mockExecuteFunctions, items);
+			expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+				method: 'GET',
+				url: 'https://wax.api.atomicassets.io/atomicassets/v1/accounts?match=test&collection_name=collection1&limit=50&page=1',
+				json: true,
+			});
+			expect(result[0].json).toEqual(mockResponse);
+		});
 
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/accounts?match=test&limit=100&page=1',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer test-api-key',
-        },
-        json: true,
-      });
-    });
+		it('should handle errors in getAccounts', async () => {
+			mockExecuteFunctions.getNodeParameter.mockReturnValue('getAccounts');
+			mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('API Error'));
+			mockExecuteFunctions.continueOnFail.mockReturnValue(true);
 
-    it('should handle getAccounts error', async () => {
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getAccounts';
-          default: return '';
-        }
-      });
+			const result = await executeAccountsOperations.call(mockExecuteFunctions, [{ json: {} }]);
 
-      mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('API Error'));
+			expect(result[0].json.error).toBe('API Error');
+		});
+	});
 
-      const items = [{ json: {} }];
+	describe('getAccount operation', () => {
+		it('should get account successfully', async () => {
+			mockExecuteFunctions.getNodeParameter
+				.mockReturnValueOnce('getAccount')
+				.mockReturnValueOnce('testaccount');
 
-      await expect(executeAccountsOperations.call(mockExecuteFunctions, items)).rejects.toThrow();
-    });
-  });
+			const mockResponse = { data: { account: 'testaccount' } };
+			mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
-  describe('getAccount', () => {
-    it('should get account details successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: {
-          account: 'testaccount',
-          assets: '150'
-        }
-      };
+			const result = await executeAccountsOperations.call(mockExecuteFunctions, [{ json: {} }]);
 
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getAccount';
-          case 'account': return 'testaccount';
-          default: return undefined;
-        }
-      });
+			expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+				method: 'GET',
+				url: 'https://wax.api.atomicassets.io/atomicassets/v1/accounts/testaccount',
+				json: true,
+			});
+			expect(result[0].json).toEqual(mockResponse);
+		});
+	});
 
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
+	describe('getAccountCollections operation', () => {
+		it('should get account collections successfully', async () => {
+			mockExecuteFunctions.getNodeParameter
+				.mockReturnValueOnce('getAccountCollections')
+				.mockReturnValueOnce('testaccount')
+				.mockReturnValueOnce(25)
+				.mockReturnValueOnce(2);
 
-      const items = [{ json: {} }];
-      const result = await executeAccountsOperations.call(mockExecuteFunctions, items);
+			const mockResponse = { data: [{ collection_name: 'collection1' }] };
+			mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/accounts/testaccount',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer test-api-key',
-        },
-        json: true,
-      });
-    });
-  });
+			const result = await executeAccountsOperations.call(mockExecuteFunctions, [{ json: {} }]);
 
-  describe('getAccountCollection', () => {
-    it('should get account collection successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: {
-          assets: '25',
-          collection: 'testcollection'
-        }
-      };
+			expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+				method: 'GET',
+				url: 'https://wax.api.atomicassets.io/atomicassets/v1/accounts/testaccount/collections?limit=25&page=2',
+				json: true,
+			});
+			expect(result[0].json).toEqual(mockResponse);
+		});
+	});
 
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getAccountCollection';
-          case 'account': return 'testaccount';
-          case 'collection_name': return 'testcollection';
-          default: return undefined;
-        }
-      });
+	describe('getAccountCollection operation', () => {
+		it('should get account collection successfully', async () => {
+			mockExecuteFunctions.getNodeParameter
+				.mockReturnValueOnce('getAccountCollection')
+				.mockReturnValueOnce('testaccount')
+				.mockReturnValueOnce('testcollection');
 
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
+			const mockResponse = { data: [{ asset_id: '123' }] };
+			mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
-      const items = [{ json: {} }];
-      const result = await executeAccountsOperations.call(mockExecuteFunctions, items);
+			const result = await executeAccountsOperations.call(mockExecuteFunctions, [{ json: {} }]);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/accounts/testaccount/testcollection',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer test-api-key',
-        },
-        json: true,
-      });
-    });
-  });
+			expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+				method: 'GET',
+				url: 'https://wax.api.atomicassets.io/atomicassets/v1/accounts/testaccount/testcollection',
+				json: true,
+			});
+			expect(result[0].json).toEqual(mockResponse);
+		});
+	});
 });
 
 describe('Transfers Resource', () => {
@@ -1167,294 +451,294 @@ describe('Transfers Resource', () => {
     mockExecuteFunctions = {
       getNodeParameter: jest.fn(),
       getCredentials: jest.fn().mockResolvedValue({
-        apiKey: 'test-api-key',
-        baseUrl: 'https://wax.api.atomicassets.io',
+        baseUrl: 'https://wax.api.atomicassets.io'
       }),
       getInputData: jest.fn().mockReturnValue([{ json: {} }]),
       getNode: jest.fn().mockReturnValue({ name: 'Test Node' }),
       continueOnFail: jest.fn().mockReturnValue(false),
       helpers: {
         httpRequest: jest.fn(),
-        requestWithAuthentication: jest.fn(),
-      },
+        requestWithAuthentication: jest.fn()
+      }
     };
   });
 
-  describe('getTransfers', () => {
+  describe('getTransfers operation', () => {
     it('should get transfers successfully', async () => {
       const mockResponse = {
         success: true,
         data: [
           {
-            transfer_id: '123456789',
-            sender_name: 'alice',
-            recipient_name: 'bob',
-            assets: ['1099511627776'],
+            transfer_id: '123456',
+            sender: 'sender.wax',
+            recipient: 'recipient.wax',
+            assets: []
           }
         ]
       };
 
-      mockExecuteFunctions.getNodeParameter.mockImplementation((paramName: string) => {
-        const params: any = {
-          operation: 'getTransfers',
-          account: 'alice',
-          limit: 100,
-          page: 1,
-        };
-        return params[paramName];
-      });
+      mockExecuteFunctions.getNodeParameter
+        .mockReturnValueOnce('getTransfers')
+        .mockReturnValueOnce('test.wax')
+        .mockReturnValueOnce('')
+        .mockReturnValueOnce('')
+        .mockReturnValueOnce('')
+        .mockReturnValueOnce('')
+        .mockReturnValueOnce(100)
+        .mockReturnValueOnce(1);
 
       mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
-      const result = await executeTransfersOperations.call(
-        mockExecuteFunctions,
-        [{ json: {} }]
-      );
+      const items = [{ json: {} }];
+      const result = await executeTransfersOperations.call(mockExecuteFunctions, items);
 
       expect(result).toHaveLength(1);
       expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/transfers?account=alice&limit=100&page=1',
-        headers: {
-          'Authorization': 'Bearer test-api-key',
-          'Content-Type': 'application/json',
-        },
-        json: true,
-      });
     });
 
-    it('should handle errors when getting transfers', async () => {
-      mockExecuteFunctions.getNodeParameter.mockImplementation((paramName: string) => {
-        return paramName === 'operation' ? 'getTransfers' : '';
-      });
+    it('should handle getTransfers error', async () => {
+      const error = new Error('API Error');
+      mockExecuteFunctions.getNodeParameter.mockReturnValueOnce('getTransfers');
+      mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(error);
+      mockExecuteFunctions.continueOnFail.mockReturnValue(true);
 
-      mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('API Error'));
+      const items = [{ json: {} }];
+      const result = await executeTransfersOperations.call(mockExecuteFunctions, items);
 
-      await expect(
-        executeTransfersOperations.call(mockExecuteFunctions, [{ json: {} }])
-      ).rejects.toThrow('API Error');
+      expect(result[0].json.error).toBe('API Error');
     });
   });
 
-  describe('getTransfer', () => {
-    it('should get specific transfer successfully', async () => {
+  describe('getTransfer operation', () => {
+    it('should get transfer successfully', async () => {
       const mockResponse = {
         success: true,
         data: {
-          transfer_id: '123456789',
-          sender_name: 'alice',
-          recipient_name: 'bob',
-          assets: ['1099511627776'],
+          transfer_id: '123456',
+          sender: 'sender.wax',
+          recipient: 'recipient.wax',
+          assets: []
         }
       };
 
-      mockExecuteFunctions.getNodeParameter.mockImplementation((paramName: string) => {
-        const params: any = {
-          operation: 'getTransfer',
-          transfer_id: '123456789',
-        };
-        return params[paramName];
-      });
+      mockExecuteFunctions.getNodeParameter
+        .mockReturnValueOnce('getTransfer')
+        .mockReturnValueOnce('123456');
 
       mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
-      const result = await executeTransfersOperations.call(
-        mockExecuteFunctions,
-        [{ json: {} }]
-      );
+      const items = [{ json: {} }];
+      const result = await executeTransfersOperations.call(mockExecuteFunctions, items);
 
       expect(result).toHaveLength(1);
       expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/transfers/123456789',
-        headers: {
-          'Authorization': 'Bearer test-api-key',
-          'Content-Type': 'application/json',
-        },
-        json: true,
-      });
     });
 
-    it('should handle missing transfer ID', async () => {
-      mockExecuteFunctions.getNodeParameter.mockImplementation((paramName: string) => {
-        return paramName === 'operation' ? 'getTransfer' : '';
-      });
+    it('should handle getTransfer error', async () => {
+      const error = new Error('Transfer not found');
+      mockExecuteFunctions.getNodeParameter
+        .mockReturnValueOnce('getTransfer')
+        .mockReturnValueOnce('invalid-id');
+      mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(error);
+      mockExecuteFunctions.continueOnFail.mockReturnValue(true);
 
-      await expect(
-        executeTransfersOperations.call(mockExecuteFunctions, [{ json: {} }])
-      ).rejects.toThrow('Transfer ID is required');
+      const items = [{ json: {} }];
+      const result = await executeTransfersOperations.call(mockExecuteFunctions, items);
+
+      expect(result[0].json.error).toBe('Transfer not found');
     });
   });
 });
 
-describe('Offers Resource', () => {
+describe('Burns Resource', () => {
   let mockExecuteFunctions: any;
 
   beforeEach(() => {
     mockExecuteFunctions = {
       getNodeParameter: jest.fn(),
-      getCredentials: jest.fn().mockResolvedValue({
-        apiKey: 'test-api-key',
-        baseUrl: 'https://wax.api.atomicassets.io',
-      }),
+      getCredentials: jest.fn().mockResolvedValue({ apiKey: 'test-key', baseUrl: 'https://wax.api.atomicassets.io' }),
       getInputData: jest.fn().mockReturnValue([{ json: {} }]),
       getNode: jest.fn().mockReturnValue({ name: 'Test Node' }),
       continueOnFail: jest.fn().mockReturnValue(false),
-      helpers: {
-        httpRequest: jest.fn(),
-        requestWithAuthentication: jest.fn(),
-      },
+      helpers: { httpRequest: jest.fn(), requestWithAuthentication: jest.fn() },
     };
   });
 
-  describe('getOffers operation', () => {
-    it('should retrieve offers successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: [
-          {
-            offer_id: '12345',
-            sender_name: 'testaccount1',
-            recipient_name: 'testaccount2',
-            state: 0,
-            memo: 'Trade offer',
-            sender_assets: [],
-            recipient_assets: [],
-          },
-        ],
-        query_time: 1234567890,
-      };
-
+  describe('getBurns operation', () => {
+    it('should get burns with filters', async () => {
       mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
         switch (param) {
-          case 'operation': return 'getOffers';
-          case 'account': return 'testaccount1';
+          case 'operation': return 'getBurns';
+          case 'collectionName': return 'testcollection';
+          case 'schemaName': return '';
+          case 'templateId': return '';
+          case 'burnedByAccount': return '';
           case 'limit': return 100;
           case 'page': return 1;
           default: return '';
         }
       });
 
+      const mockResponse = { data: [{ burn_id: '1', asset_id: '123' }] };
       mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
 
-      const items = [{ json: {} }];
-      const result = await executeOffersOperations.call(mockExecuteFunctions, items);
+      const result = await executeBurnsOperations.call(mockExecuteFunctions, [{ json: {} }]);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
       expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
         method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/offers?account=testaccount1&limit=100&page=1',
-        headers: {
-          'X-API-Key': 'test-api-key',
-        },
+        url: 'https://wax.api.atomicassets.io/atomicassets/v1/burns?collection_name=testcollection&limit=100&page=1',
         json: true,
       });
+      expect(result[0].json).toEqual(mockResponse);
     });
 
-    it('should handle getOffers errors', async () => {
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        return param === 'operation' ? 'getOffers' : '';
-      });
-
+    it('should handle getBurns errors', async () => {
+      mockExecuteFunctions.getNodeParameter.mockReturnValue('getBurns');
       mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('API Error'));
-
-      const items = [{ json: {} }];
-
-      await expect(
-        executeOffersOperations.call(mockExecuteFunctions, items)
-      ).rejects.toThrow('API Error');
-    });
-  });
-
-  describe('getOffer operation', () => {
-    it('should retrieve specific offer successfully', async () => {
-      const mockResponse = {
-        success: true,
-        data: {
-          offer_id: '12345',
-          sender_name: 'testaccount1',
-          recipient_name: 'testaccount2',
-          state: 0,
-          memo: 'Trade offer',
-          sender_assets: [],
-          recipient_assets: [],
-          created_at_time: '1234567890',
-          updated_at_time: '1234567890',
-        },
-        query_time: 1234567890,
-      };
-
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getOffer';
-          case 'offer_id': return '12345';
-          default: return '';
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
-
-      const items = [{ json: {} }];
-      const result = await executeOffersOperations.call(mockExecuteFunctions, items);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual(mockResponse);
-      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
-        method: 'GET',
-        url: 'https://wax.api.atomicassets.io/atomicassets/v1/offers/12345',
-        headers: {
-          'X-API-Key': 'test-api-key',
-        },
-        json: true,
-      });
-    });
-
-    it('should handle getOffer errors', async () => {
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        switch (param) {
-          case 'operation': return 'getOffer';
-          case 'offer_id': return 'invalid-id';
-          default: return '';
-        }
-      });
-
-      mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('Offer not found'));
-
-      const items = [{ json: {} }];
-
-      await expect(
-        executeOffersOperations.call(mockExecuteFunctions, items)
-      ).rejects.toThrow('Offer not found');
-    });
-  });
-
-  describe('error handling', () => {
-    it('should handle unknown operation', async () => {
-      mockExecuteFunctions.getNodeParameter.mockReturnValue('unknownOperation');
-
-      const items = [{ json: {} }];
-
-      await expect(
-        executeOffersOperations.call(mockExecuteFunctions, items)
-      ).rejects.toThrow('Unknown operation: unknownOperation');
-    });
-
-    it('should continue on fail when configured', async () => {
-      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
-        return param === 'operation' ? 'getOffers' : '';
-      });
       mockExecuteFunctions.continueOnFail.mockReturnValue(true);
-      mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('API Error'));
 
-      const items = [{ json: {} }];
-      const result = await executeOffersOperations.call(mockExecuteFunctions, items);
+      const result = await executeBurnsOperations.call(mockExecuteFunctions, [{ json: {} }]);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].json).toEqual({ error: 'API Error' });
+      expect(result[0].json.error).toBe('API Error');
     });
   });
+
+  describe('getBurn operation', () => {
+    it('should get specific burn', async () => {
+      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
+        switch (param) {
+          case 'operation': return 'getBurn';
+          case 'burnId': return '12345';
+          default: return '';
+        }
+      });
+
+      const mockResponse = { data: { burn_id: '12345', asset_id: '123' } };
+      mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockResponse);
+
+      const result = await executeBurnsOperations.call(mockExecuteFunctions, [{ json: {} }]);
+
+      expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+        method: 'GET',
+        url: 'https://wax.api.atomicassets.io/atomicassets/v1/burns/12345',
+        json: true,
+      });
+      expect(result[0].json).toEqual(mockResponse);
+    });
+
+    it('should handle getBurn errors', async () => {
+      mockExecuteFunctions.getNodeParameter.mockImplementation((param: string) => {
+        switch (param) {
+          case 'operation': return 'getBurn';
+          case 'burnId': return '12345';
+          default: return '';
+        }
+      });
+      mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('API Error'));
+      mockExecuteFunctions.continueOnFail.mockReturnValue(true);
+
+      const result = await executeBurnsOperations.call(mockExecuteFunctions, [{ json: {} }]);
+
+      expect(result[0].json.error).toBe('API Error');
+    });
+  });
+});
+
+describe('Config Resource', () => {
+	let mockExecuteFunctions: any;
+
+	beforeEach(() => {
+		mockExecuteFunctions = {
+			getNodeParameter: jest.fn(),
+			getCredentials: jest.fn().mockResolvedValue({
+				baseUrl: 'https://wax.api.atomicassets.io',
+			}),
+			getInputData: jest.fn().mockReturnValue([{ json: {} }]),
+			getNode: jest.fn().mockReturnValue({ name: 'Test Node' }),
+			continueOnFail: jest.fn().mockReturnValue(false),
+			helpers: {
+				httpRequest: jest.fn(),
+			},
+		};
+	});
+
+	describe('getConfig operation', () => {
+		it('should get AtomicAssets configuration successfully', async () => {
+			const mockConfig = {
+				success: true,
+				data: {
+					contract: 'atomicassets',
+					version: '1.3.0',
+					collection_format: [],
+					supported_tokens: [],
+				},
+			};
+
+			mockExecuteFunctions.getNodeParameter.mockReturnValue('getConfig');
+			mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockConfig);
+
+			const result = await executeConfigOperations.call(mockExecuteFunctions, [{ json: {} }]);
+
+			expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+				method: 'GET',
+				url: 'https://wax.api.atomicassets.io/atomicassets/v1/config',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				json: true,
+			});
+			expect(result).toEqual([{ json: mockConfig, pairedItem: { item: 0 } }]);
+		});
+
+		it('should handle getConfig errors', async () => {
+			mockExecuteFunctions.getNodeParameter.mockReturnValue('getConfig');
+			mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('API Error'));
+			mockExecuteFunctions.continueOnFail.mockReturnValue(true);
+
+			const result = await executeConfigOperations.call(mockExecuteFunctions, [{ json: {} }]);
+
+			expect(result).toEqual([{ json: { error: 'API Error' }, pairedItem: { item: 0 } }]);
+		});
+	});
+
+	describe('getMarketConfig operation', () => {
+		it('should get AtomicMarket configuration successfully', async () => {
+			const mockConfig = {
+				success: true,
+				data: {
+					contract: 'atomicmarket',
+					version: '1.3.0',
+					maker_market_fee: 0.02,
+					taker_market_fee: 0.02,
+					minimum_auction_duration: 300,
+				},
+			};
+
+			mockExecuteFunctions.getNodeParameter.mockReturnValue('getMarketConfig');
+			mockExecuteFunctions.helpers.httpRequest.mockResolvedValue(mockConfig);
+
+			const result = await executeConfigOperations.call(mockExecuteFunctions, [{ json: {} }]);
+
+			expect(mockExecuteFunctions.helpers.httpRequest).toHaveBeenCalledWith({
+				method: 'GET',
+				url: 'https://wax.api.atomicassets.io/atomicmarket/v1/config',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				json: true,
+			});
+			expect(result).toEqual([{ json: mockConfig, pairedItem: { item: 0 } }]);
+		});
+
+		it('should handle getMarketConfig errors', async () => {
+			mockExecuteFunctions.getNodeParameter.mockReturnValue('getMarketConfig');
+			mockExecuteFunctions.helpers.httpRequest.mockRejectedValue(new Error('Market API Error'));
+			mockExecuteFunctions.continueOnFail.mockReturnValue(true);
+
+			const result = await executeConfigOperations.call(mockExecuteFunctions, [{ json: {} }]);
+
+			expect(result).toEqual([{ json: { error: 'Market API Error' }, pairedItem: { item: 0 } }]);
+		});
+	});
 });
 });
