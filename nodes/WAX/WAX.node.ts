@@ -79,6 +79,14 @@ export class WAX implements INodeType {
           {
             name: 'Offers',
             value: 'offers',
+          },
+          {
+            name: 'Burns',
+            value: 'burns',
+          },
+          {
+            name: 'Config',
+            value: 'config',
           }
         ],
         default: 'atomicAssets',
@@ -283,6 +291,18 @@ export class WAX implements INodeType {
       description: 'Get specific buy offer',
       action: 'Get buy offer',
     },
+    {
+      name: 'Get Prices',
+      value: 'getPrices',
+      description: 'Get price data for assets',
+      action: 'Get asset prices',
+    },
+    {
+      name: 'Get Collection Stats',
+      value: 'getCollectionStats',
+      description: 'Get marketplace statistics by collection',
+      action: 'Get collection statistics',
+    },
   ],
   default: 'getSales',
 },
@@ -369,6 +389,44 @@ export class WAX implements INodeType {
     },
   ],
   default: 'getOffers',
+},
+{
+  displayName: 'Operation',
+  name: 'operation',
+  type: 'options',
+  noDataExpression: true,
+  displayOptions: { show: { resource: ['burns'] } },
+  options: [
+    { name: 'Get Burns', value: 'getBurns', description: 'Get list of burned assets', action: 'Get burns' },
+    { name: 'Get Burn', value: 'getBurn', description: 'Get specific burn record', action: 'Get burn' }
+  ],
+  default: 'getBurns',
+},
+{
+	displayName: 'Operation',
+	name: 'operation',
+	type: 'options',
+	noDataExpression: true,
+	displayOptions: {
+		show: {
+			resource: ['config'],
+		},
+	},
+	options: [
+		{
+			name: 'Get AtomicAssets Configuration',
+			value: 'getConfig',
+			description: 'Get AtomicAssets configuration',
+			action: 'Get AtomicAssets configuration',
+		},
+		{
+			name: 'Get AtomicMarket Configuration',
+			value: 'getMarketConfig',
+			description: 'Get AtomicMarket configuration',
+			action: 'Get AtomicMarket configuration',
+		},
+	],
+	default: 'getConfig',
 },
       // Parameter definitions
 {
@@ -916,7 +974,7 @@ export class WAX implements INodeType {
   displayOptions: {
     show: {
       resource: ['atomicMarket'],
-      operation: ['getSales', 'getAuctions', 'getBuyOffers'],
+      operation: ['getSales', 'getAuctions', 'getBuyOffers', 'getPrices', 'getCollectionStats'],
     },
   },
   default: '',
@@ -947,6 +1005,32 @@ export class WAX implements INodeType {
   },
   default: '',
   description: 'Maximum price filter',
+},
+{
+  displayName: 'Template ID',
+  name: 'templateId',
+  type: 'string',
+  displayOptions: {
+    show: {
+      resource: ['atomicMarket'],
+      operation: ['getPrices'],
+    },
+  },
+  default: '',
+  description: 'Filter by template ID',
+},
+{
+  displayName: 'Symbol',
+  name: 'symbol',
+  type: 'string',
+  displayOptions: {
+    show: {
+      resource: ['atomicMarket'],
+      operation: ['getPrices', 'getCollectionStats'],
+    },
+  },
+  default: 'WAX',
+  description: 'Token symbol to filter by',
 },
 {
   displayName: 'Limit',
@@ -1318,6 +1402,98 @@ export class WAX implements INodeType {
   default: '',
   description: 'The ID of the offer to retrieve',
 },
+{
+  displayName: 'Collection Name',
+  name: 'collectionName',
+  type: 'string',
+  default: '',
+  description: 'Filter by collection name',
+  displayOptions: {
+    show: {
+      resource: ['burns'],
+      operation: ['getBurns'],
+    },
+  },
+},
+{
+  displayName: 'Schema Name',
+  name: 'schemaName',
+  type: 'string',
+  default: '',
+  description: 'Filter by schema name',
+  displayOptions: {
+    show: {
+      resource: ['burns'],
+      operation: ['getBurns'],
+    },
+  },
+},
+{
+  displayName: 'Template ID',
+  name: 'templateId',
+  type: 'string',
+  default: '',
+  description: 'Filter by template ID',
+  displayOptions: {
+    show: {
+      resource: ['burns'],
+      operation: ['getBurns'],
+    },
+  },
+},
+{
+  displayName: 'Burned By Account',
+  name: 'burnedByAccount',
+  type: 'string',
+  default: '',
+  description: 'Filter by account that burned the assets',
+  displayOptions: {
+    show: {
+      resource: ['burns'],
+      operation: ['getBurns'],
+    },
+  },
+},
+{
+  displayName: 'Limit',
+  name: 'limit',
+  type: 'number',
+  default: 100,
+  description: 'Maximum number of results to return',
+  displayOptions: {
+    show: {
+      resource: ['burns'],
+      operation: ['getBurns'],
+    },
+  },
+},
+{
+  displayName: 'Page',
+  name: 'page',
+  type: 'number',
+  default: 1,
+  description: 'Page number for pagination',
+  displayOptions: {
+    show: {
+      resource: ['burns'],
+      operation: ['getBurns'],
+    },
+  },
+},
+{
+  displayName: 'Burn ID',
+  name: 'burnId',
+  type: 'string',
+  required: true,
+  default: '',
+  description: 'The ID of the burn record to retrieve',
+  displayOptions: {
+    show: {
+      resource: ['burns'],
+      operation: ['getBurn'],
+    },
+  },
+},
     ],
   };
 
@@ -1342,6 +1518,10 @@ export class WAX implements INodeType {
         return [await executeTransfersOperations.call(this, items)];
       case 'offers':
         return [await executeOffersOperations.call(this, items)];
+      case 'burns':
+        return [await executeBurnsOperations.call(this, items)];
+      case 'config':
+        return [await executeConfigOperations.call(this, items)];
       default:
         throw new NodeOperationError(this.getNode(), `The resource "${resource}" is not supported`);
     }
@@ -1873,11 +2053,10 @@ async function executeAtomicMarketOperations(
   for (let i = 0; i < items.length; i++) {
     try {
       let result: any;
+      const baseUrl = credentials.baseUrl || 'https://wax.api.atomicassets.io';
 
       switch (operation) {
         case 'getSales': {
-          const queryParams: any = {};
-          
           const state = this.getNodeParameter('state', i) as string;
           const seller = this.getNodeParameter('seller', i) as string;
           const buyer = this.getNodeParameter('buyer', i) as string;
@@ -1887,6 +2066,7 @@ async function executeAtomicMarketOperations(
           const limit = this.getNodeParameter('limit', i) as number;
           const page = this.getNodeParameter('page', i) as number;
 
+          const queryParams: any = {};
           if (state) queryParams.state = state;
           if (seller) queryParams.seller = seller;
           if (buyer) queryParams.buyer = buyer;
@@ -1897,7 +2077,7 @@ async function executeAtomicMarketOperations(
           if (page) queryParams.page = page;
 
           const queryString = new URLSearchParams(queryParams).toString();
-          const url = `${credentials.baseUrl}/atomicmarket/v1/sales${queryString ? '?' + queryString : ''}`;
+          const url = `${baseUrl}/atomicmarket/v1/sales${queryString ? '?' + queryString : ''}`;
 
           const options: any = {
             method: 'GET',
@@ -1918,7 +2098,7 @@ async function executeAtomicMarketOperations(
           
           const options: any = {
             method: 'GET',
-            url: `${credentials.baseUrl}/atomicmarket/v1/sales/${saleId}`,
+            url: `${baseUrl}/atomicmarket/v1/sales/${saleId}`,
             headers: {
               'Authorization': `Bearer ${credentials.apiKey}`,
               'Content-Type': 'application/json',
@@ -1931,419 +2111,6 @@ async function executeAtomicMarketOperations(
         }
 
         case 'getAuctions': {
-          const queryParams: any = {};
-          
           const state = this.getNodeParameter('state', i) as string;
           const seller = this.getNodeParameter('seller', i) as string;
-          const bidder = this.getNodeParameter('bidder', i) as string;
-          const collectionName = this.getNodeParameter('collectionName', i) as string;
-          const limit = this.getNodeParameter('limit', i) as number;
-          const page = this.getNodeParameter('page', i) as number;
-
-          if (state) queryParams.state = state;
-          if (seller) queryParams.seller = seller;
-          if (bidder) queryParams.bidder = bidder;
-          if (collectionName) queryParams.collection_name = collectionName;
-          if (limit) queryParams.limit = limit;
-          if (page) queryParams.page = page;
-
-          const queryString = new URLSearchParams(queryParams).toString();
-          const url = `${credentials.baseUrl}/atomicmarket/v1/auctions${queryString ? '?' + queryString : ''}`;
-
-          const options: any = {
-            method: 'GET',
-            url,
-            headers: {
-              'Authorization': `Bearer ${credentials.apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            json: true,
-          };
-
-          result = await this.helpers.httpRequest(options) as any;
-          break;
-        }
-
-        case 'getAuction': {
-          const auctionId = this.getNodeParameter('auctionId', i) as string;
-          
-          const options: any = {
-            method: 'GET',
-            url: `${credentials.baseUrl}/atomicmarket/v1/auctions/${auctionId}`,
-            headers: {
-              'Authorization': `Bearer ${credentials.apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            json: true,
-          };
-
-          result = await this.helpers.httpRequest(options) as any;
-          break;
-        }
-
-        case 'getBuyOffers': {
-          const queryParams: any = {};
-          
-          const state = this.getNodeParameter('state', i) as string;
-          const seller = this.getNodeParameter('seller', i) as string;
-          const buyer = this.getNodeParameter('buyer', i) as string;
-          const collectionName = this.getNodeParameter('collectionName', i) as string;
-          const limit = this.getNodeParameter('limit', i) as number;
-          const page = this.getNodeParameter('page', i) as number;
-
-          if (state) queryParams.state = state;
-          if (seller) queryParams.seller = seller;
-          if (buyer) queryParams.buyer = buyer;
-          if (collectionName) queryParams.collection_name = collectionName;
-          if (limit) queryParams.limit = limit;
-          if (page) queryParams.page = page;
-
-          const queryString = new URLSearchParams(queryParams).toString();
-          const url = `${credentials.baseUrl}/atomicmarket/v1/buyoffers${queryString ? '?' + queryString : ''}`;
-
-          const options: any = {
-            method: 'GET',
-            url,
-            headers: {
-              'Authorization': `Bearer ${credentials.apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            json: true,
-          };
-
-          result = await this.helpers.httpRequest(options) as any;
-          break;
-        }
-
-        case 'getBuyOffer': {
-          const buyOfferId = this.getNodeParameter('buyOfferId', i) as string;
-          
-          const options: any = {
-            method: 'GET',
-            url: `${credentials.baseUrl}/atomicmarket/v1/buyoffers/${buyOfferId}`,
-            headers: {
-              'Authorization': `Bearer ${credentials.apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            json: true,
-          };
-
-          result = await this.helpers.httpRequest(options) as any;
-          break;
-        }
-
-        default:
-          throw new NodeOperationError(this.getNode(), `Unknown operation: ${operation}`);
-      }
-
-      returnData.push({ json: result, pairedItem: { item: i } });
-    } catch (error: any) {
-      if (this.continueOnFail()) {
-        returnData.push({ json: { error: error.message }, pairedItem: { item: i } });
-      } else {
-        throw new NodeApiError(this.getNode(), error);
-      }
-    }
-  }
-
-  return returnData;
-}
-
-async function executeAccountsOperations(
-  this: IExecuteFunctions,
-  items: INodeExecutionData[],
-): Promise<INodeExecutionData[]> {
-  const returnData: INodeExecutionData[] = [];
-  const operation = this.getNodeParameter('operation', 0) as string;
-  const credentials = await this.getCredentials('waxApi') as any;
-
-  for (let i = 0; i < items.length; i++) {
-    try {
-      let result: any;
-      
-      switch (operation) {
-        case 'getAccounts': {
-          const match = this.getNodeParameter('match', i) as string;
-          const collectionName = this.getNodeParameter('collection_name', i) as string;
-          const limit = this.getNodeParameter('limit', i) as number;
-          const page = this.getNodeParameter('page', i) as number;
-
-          const queryParams: any = {};
-          if (match) queryParams.match = match;
-          if (collectionName) queryParams.collection_name = collectionName;
-          if (limit) queryParams.limit = limit;
-          if (page) queryParams.page = page;
-
-          const queryString = new URLSearchParams(queryParams).toString();
-          const url = `${credentials.baseUrl || 'https://wax.api.atomicassets.io'}/atomicassets/v1/accounts${queryString ? `?${queryString}` : ''}`;
-
-          const options: any = {
-            method: 'GET',
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            json: true,
-          };
-
-          if (credentials.apiKey) {
-            options.headers.Authorization = `Bearer ${credentials.apiKey}`;
-          }
-
-          result = await this.helpers.httpRequest(options) as any;
-          break;
-        }
-
-        case 'getAccount': {
-          const account = this.getNodeParameter('account', i) as string;
-
-          const url = `${credentials.baseUrl || 'https://wax.api.atomicassets.io'}/atomicassets/v1/accounts/${account}`;
-
-          const options: any = {
-            method: 'GET',
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            json: true,
-          };
-
-          if (credentials.apiKey) {
-            options.headers.Authorization = `Bearer ${credentials.apiKey}`;
-          }
-
-          result = await this.helpers.httpRequest(options) as any;
-          break;
-        }
-
-        case 'getAccountCollection': {
-          const account = this.getNodeParameter('account', i) as string;
-          const collectionName = this.getNodeParameter('collection_name', i) as string;
-
-          const url = `${credentials.baseUrl || 'https://wax.api.atomicassets.io'}/atomicassets/v1/accounts/${account}/${collectionName}`;
-
-          const options: any = {
-            method: 'GET',
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            json: true,
-          };
-
-          if (credentials.apiKey) {
-            options.headers.Authorization = `Bearer ${credentials.apiKey}`;
-          }
-
-          result = await this.helpers.httpRequest(options) as any;
-          break;
-        }
-
-        default:
-          throw new NodeOperationError(this.getNode(), `Unknown operation: ${operation}`);
-      }
-
-      returnData.push({ 
-        json: result, 
-        pairedItem: { item: i } 
-      });
-
-    } catch (error: any) {
-      if (this.continueOnFail()) {
-        returnData.push({ 
-          json: { error: error.message }, 
-          pairedItem: { item: i } 
-        });
-      } else {
-        throw new NodeApiError(this.getNode(), error);
-      }
-    }
-  }
-
-  return returnData;
-}
-
-async function executeTransfersOperations(
-  this: IExecuteFunctions,
-  items: INodeExecutionData[],
-): Promise<INodeExecutionData[]> {
-  const returnData: INodeExecutionData[] = [];
-  const operation = this.getNodeParameter('operation', 0) as string;
-  const credentials = await this.getCredentials('waxApi') as any;
-
-  for (let i = 0; i < items.length; i++) {
-    try {
-      let result: any;
-
-      switch (operation) {
-        case 'getTransfers': {
-          const account = this.getNodeParameter('account', i) as string;
-          const sender = this.getNodeParameter('sender', i) as string;
-          const recipient = this.getNodeParameter('recipient', i) as string;
-          const assetId = this.getNodeParameter('asset_id', i) as string;
-          const collectionName = this.getNodeParameter('collection_name', i) as string;
-          const limit = this.getNodeParameter('limit', i) as number;
-          const page = this.getNodeParameter('page', i) as number;
-
-          const params: any = {};
-          if (account) params.account = account;
-          if (sender) params.sender = sender;
-          if (recipient) params.recipient = recipient;
-          if (assetId) params.asset_id = assetId;
-          if (collectionName) params.collection_name = collectionName;
-          if (limit) params.limit = limit;
-          if (page) params.page = page;
-
-          const queryString = new URLSearchParams(params).toString();
-          const url = `${credentials.baseUrl}/atomicassets/v1/transfers${queryString ? '?' + queryString : ''}`;
-
-          const options: any = {
-            method: 'GET',
-            url,
-            headers: {
-              'Authorization': `Bearer ${credentials.apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            json: true,
-          };
-
-          result = await this.helpers.httpRequest(options) as any;
-          break;
-        }
-
-        case 'getTransfer': {
-          const transferId = this.getNodeParameter('transfer_id', i) as string;
-
-          if (!transferId) {
-            throw new NodeOperationError(this.getNode(), 'Transfer ID is required');
-          }
-
-          const url = `${credentials.baseUrl}/atomicassets/v1/transfers/${transferId}`;
-
-          const options: any = {
-            method: 'GET',
-            url,
-            headers: {
-              'Authorization': `Bearer ${credentials.apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            json: true,
-          };
-
-          result = await this.helpers.httpRequest(options) as any;
-          break;
-        }
-
-        default:
-          throw new NodeOperationError(this.getNode(), `Unknown operation: ${operation}`);
-      }
-
-      returnData.push({
-        json: result,
-        pairedItem: { item: i },
-      });
-
-    } catch (error: any) {
-      if (this.continueOnFail()) {
-        returnData.push({
-          json: { error: error.message },
-          pairedItem: { item: i },
-        });
-      } else {
-        if (error.httpCode) {
-          throw new NodeApiError(this.getNode(), error);
-        }
-        throw new NodeOperationError(this.getNode(), error.message);
-      }
-    }
-  }
-
-  return returnData;
-}
-
-async function executeOffersOperations(
-  this: IExecuteFunctions,
-  items: INodeExecutionData[],
-): Promise<INodeExecutionData[]> {
-  const returnData: INodeExecutionData[] = [];
-  const operation = this.getNodeParameter('operation', 0) as string;
-  const credentials = await this.getCredentials('waxApi') as any;
-
-  for (let i = 0; i < items.length; i++) {
-    try {
-      let result: any;
-      
-      switch (operation) {
-        case 'getOffers': {
-          const account = this.getNodeParameter('account', i) as string;
-          const sender = this.getNodeParameter('sender', i) as string;
-          const recipient = this.getNodeParameter('recipient', i) as string;
-          const state = this.getNodeParameter('state', i) as string;
-          const assetId = this.getNodeParameter('asset_id', i) as string;
-          const limit = this.getNodeParameter('limit', i) as number;
-          const page = this.getNodeParameter('page', i) as number;
-
-          const params: any = {};
-          if (account) params.account = account;
-          if (sender) params.sender = sender;
-          if (recipient) params.recipient = recipient;
-          if (state) params.state = state;
-          if (assetId) params.asset_id = assetId;
-          if (limit) params.limit = limit;
-          if (page) params.page = page;
-
-          const queryString = new URLSearchParams(params).toString();
-          const url = `${credentials.baseUrl}/atomicassets/v1/offers${queryString ? '?' + queryString : ''}`;
-
-          const options: any = {
-            method: 'GET',
-            url,
-            headers: {
-              'X-API-Key': credentials.apiKey,
-            },
-            json: true,
-          };
-
-          result = await this.helpers.httpRequest(options) as any;
-          break;
-        }
-
-        case 'getOffer': {
-          const offerId = this.getNodeParameter('offer_id', i) as string;
-
-          const options: any = {
-            method: 'GET',
-            url: `${credentials.baseUrl}/atomicassets/v1/offers/${offerId}`,
-            headers: {
-              'X-API-Key': credentials.apiKey,
-            },
-            json: true,
-          };
-
-          result = await this.helpers.httpRequest(options) as any;
-          break;
-        }
-
-        default:
-          throw new NodeOperationError(this.getNode(), `Unknown operation: ${operation}`);
-      }
-
-      returnData.push({
-        json: result,
-        pairedItem: { item: i },
-      });
-
-    } catch (error: any) {
-      if (this.continueOnFail()) {
-        returnData.push({
-          json: { error: error.message },
-          pairedItem: { item: i },
-        });
-      } else {
-        throw new NodeApiError(this.getNode(), error);
-      }
-    }
-  }
-
-  return returnData;
-}
+          const bidder = this.getNodeParameter('
